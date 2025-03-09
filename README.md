@@ -1,4 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Cursor Tracker
+
+## About This Project
+
+This project was built from the ground up using Cursor, an AI-powered IDE. The entire codebase was created by following prompts and iterative development with Cursor's AI assistant.
+
+### A Note on AI Development
+
+While Cursor was instrumental in building this project, it's important to acknowledge that, like many AI systems, it can sometimes hallucinate or provide incorrect information (approximately 50% of the time). The development process required careful validation and testing of the AI's suggestions to ensure proper functionality.
+
+## Project Features
+
+- Video playback with cursor tracking
+- Zoom effect controls
+- Timeline-based effect editing
+- Frame-by-frame navigation
+- Loop functionality
+
+## Technical Stack
+
+- React
+- TypeScript
+- Remotion
+- Tailwind CSS
+
+## Development Process
+
+The project was developed through an iterative conversation with Cursor's AI, which:
+
+1. Set up the initial project structure
+2. Implemented core video playback functionality
+3. Added effect layers and timeline controls
+4. Refined the UI and user experience
+
+However, each step required human oversight to:
+
+- Verify the correctness of implemented features
+- Test edge cases
+- Fix any hallucinated or incorrect implementations
+- Ensure proper type safety and error handling
+
+## Lessons Learned
+
+- AI can significantly speed up development, but verification is crucial
+- Clear and specific prompts lead to better results
+- Regular testing helps catch AI hallucinations early
+- Human oversight remains essential for quality assurance
 
 ## Getting Started
 
@@ -38,3 +84,11 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+
+## Contributing
+
+Feel free to contribute to this project. Please note that while we used AI to build it, all contributions should be properly tested and verified.
+
+## License
+
+[License information would go here]
