@@ -6,14 +6,7 @@ interface TimelineProps {
   currentFrame: number;
   totalFrames: number;
   fps: number;
-  layers: Array<{
-    id: string;
-    type: 'zoom' | 'pan';
-    startFrame: number;
-    endFrame: number;
-    startValue?: number;
-    endValue?: number;
-  }>;
+  layers: EffectLayer[];
   onFrameChange: (frame: number) => void;
   onLayerUpdate: (id: string, startFrame: number, endFrame: number) => void;
   onLayerSelect: (id: string) => void;
@@ -97,6 +90,16 @@ export const Timeline: React.FC<TimelineProps> = ({
     };
   }, [isDragging]);
 
+  // Group related layers together
+  const groupedLayers = layers.reduce((groups, layer) => {
+    const baseId = layer.id.split('-')[2]; // Get the index part of the ID
+    if (!groups[baseId]) {
+      groups[baseId] = [];
+    }
+    groups[baseId].push(layer);
+    return groups;
+  }, {} as Record<string, EffectLayer[]>);
+
   return (
     <div className="bg-gray-800 p-4 rounded-lg select-none">
       <div className="mb-2 flex justify-between text-gray-400 text-sm">
@@ -128,23 +131,37 @@ export const Timeline: React.FC<TimelineProps> = ({
 
         {/* Layers */}
         <div className="relative flex-1">
-          {layers.map((layer) => (
-            <TimelineLayer
-              key={layer.id}
-              id={layer.id}
-              startFrame={layer.startFrame}
-              endFrame={layer.endFrame}
-              totalFrames={totalFrames}
-              fps={fps}
-              onUpdate={onLayerUpdate}
-              onSelect={() => onLayerSelect(layer.id)}
-              onDelete={() => onLayerDelete(layer.id)}
-              onUpdateValue={(value, isStart) => onLayerValueUpdate(layer.id, value, isStart)}
-              isSelected={layer.id === selectedLayerId}
-              startValue={layer.type === 'zoom' ? layer.startValue : undefined}
-              endValue={layer.type === 'zoom' ? layer.endValue : undefined}
-            />
-          ))}
+          {Object.values(groupedLayers).map((group) => {
+            // Use the zoom layer as the representative for the group
+            const mainLayer = group.find(l => l.type === 'zoom') || group[0];
+            return (
+              <TimelineLayer
+                key={mainLayer.id}
+                id={mainLayer.id}
+                startFrame={mainLayer.startFrame}
+                endFrame={mainLayer.endFrame}
+                totalFrames={totalFrames}
+                fps={fps}
+                onUpdate={(id, start, end) => {
+                  // Update all layers in the group
+                  group.forEach(layer => {
+                    onLayerUpdate(layer.id, start, end);
+                  });
+                }}
+                onSelect={() => onLayerSelect(mainLayer.id)}
+                onDelete={() => {
+                  // Delete all layers in the group
+                  group.forEach(layer => {
+                    onLayerDelete(layer.id);
+                  });
+                }}
+                onUpdateValue={(value, isStart) => onLayerValueUpdate(mainLayer.id, value, isStart)}
+                isSelected={mainLayer.id === selectedLayerId}
+                startValue={mainLayer.type === 'zoom' ? mainLayer.startValue : undefined}
+                endValue={mainLayer.type === 'zoom' ? mainLayer.endValue : undefined}
+              />
+            );
+          })}
         </div>
 
         {/* Hover indicator */}

@@ -90,7 +90,7 @@ export default function ScreenRecorder() {
         const url = URL.createObjectURL(blob);
         
         const fps = 30;
-        const zoomDuration = 60; // 2 seconds at 30fps
+        const effectDuration = 60; // 2 seconds at 30fps
         
         // Sort mouse events by timestamp to handle overlaps
         const sortedEvents = [...mouseEventsRef.current].sort((a, b) => a.timestamp - b.timestamp);
@@ -107,32 +107,63 @@ export default function ScreenRecorder() {
           const eventTime = (event.timestamp - (recordingStartTimeRef.current || 0)) / 1000;
           const startFrame = Math.floor(eventTime * fps);
           
-        
           // Ensure no overlap with previous layer
           if (startFrame <= lastEndFrame) {
             console.log('Skipping overlapping click event');
             return; // Skip this event if it would overlap
           }
           
-          const endFrame = Math.min(Math.floor(duration * fps), startFrame + zoomDuration);
+          const endFrame = Math.min(Math.floor(duration * fps), startFrame + effectDuration);
           
-          // Create a single smooth zoom layer
-          const layer: EffectLayer = {
+          // Create zoom layer
+          const zoomLayer: EffectLayer = {
             id: `zoom-${startFrame}-${index}`,
             type: 'zoom' as const,
             startFrame,
             endFrame,
             startValue: 1,
-            endValue: 1.5
+            endValue: 1.5,
+            metadata: {
+              x: event.x,
+              y: event.y
+            }
           };
           
-          layers.push(layer);
+          // Create pan layer for x-axis
+          const panXLayer: EffectLayer = {
+            id: `pan-x-${startFrame}-${index}`,
+            type: 'pan-x' as const,
+            startFrame,
+            endFrame,
+            startValue: 0,
+            endValue: window.innerWidth / 2 - event.x,
+            metadata: {
+              x: event.x,
+              y: event.y
+            }
+          };
+
+          // Create pan layer for y-axis
+          const panYLayer: EffectLayer = {
+            id: `pan-y-${startFrame}-${index}`,
+            type: 'pan-y' as const,
+            startFrame,
+            endFrame,
+            startValue: 0,
+            endValue: window.innerHeight / 2 - event.y,
+            metadata: {
+              x: event.x,
+              y: event.y
+            }
+          };
+          
+          // Add all layers
+          layers.push(zoomLayer, panXLayer, panYLayer);
           lastEndFrame = endFrame;
         });
 
         // Store data in localStorage
         try {
-          
           localStorage.setItem('recordedVideoUrl', url);
           localStorage.setItem('recordedLayers', JSON.stringify(layers));
           localStorage.setItem('recordedDuration', duration.toString());
@@ -171,6 +202,94 @@ export default function ScreenRecorder() {
     }
   };
 
+  const showClickFeedback = (x: number, y: number) => {
+    // Create container for pan and zoom effect
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.inset = '0';
+    container.style.backgroundColor = 'transparent';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '9999';
+    container.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+    document.body.appendChild(container);
+
+    // Create feedback circles
+    const feedback = document.createElement('div');
+    feedback.style.position = 'absolute';
+    feedback.style.left = `${x}px`;
+    feedback.style.top = `${y}px`;
+    feedback.style.width = '60px';
+    feedback.style.height = '60px';
+    feedback.style.border = '3px solid #3b82f6';
+    feedback.style.borderRadius = '50%';
+    feedback.style.transform = 'translate(-50%, -50%)';
+    feedback.style.pointerEvents = 'none';
+    feedback.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+    feedback.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+    container.appendChild(feedback);
+
+    const innerFeedback = document.createElement('div');
+    innerFeedback.style.position = 'absolute';
+    innerFeedback.style.left = '50%';
+    innerFeedback.style.top = '50%';
+    innerFeedback.style.width = '30px';
+    innerFeedback.style.height = '30px';
+    innerFeedback.style.border = '2px solid #3b82f6';
+    innerFeedback.style.borderRadius = '50%';
+    innerFeedback.style.transform = 'translate(-50%, -50%)';
+    innerFeedback.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+    innerFeedback.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
+    feedback.appendChild(innerFeedback);
+
+    // Calculate center point and distance
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const centerX = viewportWidth / 2;
+    const centerY = viewportHeight / 2;
+    
+    // Calculate translation needed to center the click
+    const translateX = centerX - x;
+    const translateY = centerY - y;
+
+    // Create a wrapper for the screen content
+    const screenWrapper = document.createElement('div');
+    screenWrapper.style.position = 'fixed';
+    screenWrapper.style.inset = '0';
+    screenWrapper.style.zIndex = '9998';
+    screenWrapper.style.pointerEvents = 'none';
+    screenWrapper.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    // Move all body children (except container) into wrapper
+    while (document.body.firstChild && document.body.firstChild !== container) {
+      screenWrapper.appendChild(document.body.firstChild);
+    }
+    document.body.insertBefore(screenWrapper, container);
+
+    // Animate the pan and zoom
+    requestAnimationFrame(() => {
+      screenWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(1.5)`;
+      feedback.style.transform = 'translate(-50%, -50%) scale(1.75)';
+      feedback.style.opacity = '0';
+      innerFeedback.style.transform = 'translate(-50%, -50%) scale(0.5)';
+      innerFeedback.style.opacity = '0';
+
+      // Reset after animation
+      setTimeout(() => {
+        screenWrapper.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        screenWrapper.style.transform = 'translate(0, 0) scale(1)';
+        
+        // Move children back and cleanup
+        setTimeout(() => {
+          while (screenWrapper.firstChild) {
+            document.body.insertBefore(screenWrapper.firstChild, container);
+          }
+          screenWrapper.remove();
+          container.remove();
+        }, 800);
+      }, 800);
+    });
+  };
+
   const handleClick = (e: globalThis.MouseEvent) => {
     if (!state.isRecording || !state.startTime) return;
 
@@ -195,56 +314,14 @@ export default function ScreenRecorder() {
     mouseEventsRef.current = [...mouseEventsRef.current, newEvent];
     setState(prev => {
       const updatedEvents = [...prev.mouseEvents, newEvent];
-      console.log('State updated with new click:', {
-        previousEventsCount: prev.mouseEvents.length,
-        newEventsCount: updatedEvents.length,
-        allEvents: updatedEvents,
-        refEvents: mouseEventsRef.current
-      });
       return {
         ...prev,
         mouseEvents: updatedEvents
       };
     });
 
-    // Visual feedback
-    const feedback = document.createElement('div');
-    feedback.style.position = 'absolute';
-    feedback.style.left = `${e.clientX}px`;
-    feedback.style.top = `${e.clientY}px`;
-    feedback.style.width = '60px';
-    feedback.style.height = '60px';
-    feedback.style.border = '3px solid #3b82f6';
-    feedback.style.borderRadius = '50%';
-    feedback.style.transform = 'translate(-50%, -50%)';
-    feedback.style.pointerEvents = 'none';
-    feedback.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
-    feedback.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
-    feedback.style.zIndex = '9999';
-    document.body.appendChild(feedback);
-
-    // Add inner circle for zoom effect
-    const innerFeedback = document.createElement('div');
-    innerFeedback.style.position = 'absolute';
-    innerFeedback.style.left = '50%';
-    innerFeedback.style.top = '50%';
-    innerFeedback.style.width = '30px';
-    innerFeedback.style.height = '30px';
-    innerFeedback.style.border = '2px solid #3b82f6';
-    innerFeedback.style.borderRadius = '50%';
-    innerFeedback.style.transform = 'translate(-50%, -50%)';
-    innerFeedback.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
-    innerFeedback.style.backgroundColor = 'rgba(59, 130, 246, 0.3)';
-    feedback.appendChild(innerFeedback);
-
-    // Animate the feedback
-    setTimeout(() => {
-      feedback.style.transform = 'translate(-50%, -50%) scale(1.75)';
-      feedback.style.opacity = '0';
-      innerFeedback.style.transform = 'translate(-50%, -50%) scale(0.5)';
-      innerFeedback.style.opacity = '0';
-      setTimeout(() => feedback.remove(), 800);
-    }, 0);
+    // Show pan and zoom feedback
+    showClickFeedback(e.clientX, e.clientY);
   };
 
   useEffect(() => {

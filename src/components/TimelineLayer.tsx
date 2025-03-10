@@ -26,8 +26,8 @@ export const TimelineLayer: React.FC<TimelineLayerProps> = ({
   isSelected,
   onDelete,
   onUpdateValue,
-  startValue,
-  endValue,
+  startValue = 1,  // Default value if undefined
+  endValue = 1,    // Default value if undefined
 }) => {
   const layerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState<'start' | 'end' | 'move' | null>(null);

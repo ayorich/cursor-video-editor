@@ -6,11 +6,15 @@ import { TimelineLayer } from './TimelineLayer';
 
 export interface EffectLayer {
   id: string;
-  type: 'zoom';
+  type: 'zoom' | 'pan-x' | 'pan-y';
   startFrame: number;
   endFrame: number;
   startValue: number;
   endValue: number;
+  metadata?: {
+    x: number;
+    y: number;
+  };
 }
 
 interface VideoEditorProps {
@@ -175,9 +179,27 @@ export const VideoEditor: React.FC<VideoEditorProps> = ({
     const effects = layers.reduce((effects, layer) => {
       if (frame >= layer.startFrame && frame <= layer.endFrame) {
         const progress = (frame - layer.startFrame) / (layer.endFrame - layer.startFrame);
-        const startZoom = layer.startValue;
-        const endZoom = layer.endValue;
-        effects.scale *= startZoom + (endZoom - startZoom) * progress;
+        
+        switch (layer.type) {
+          case 'zoom': {
+            const startZoom = layer.startValue;
+            const endZoom = layer.endValue;
+            effects.scale *= startZoom + (endZoom - startZoom) * progress;
+            break;
+          }
+          case 'pan-x': {
+            const startX = layer.startValue;
+            const endX = layer.endValue;
+            effects.x += startX + (endX - startX) * progress;
+            break;
+          }
+          case 'pan-y': {
+            const startY = layer.startValue;
+            const endY = layer.endValue;
+            effects.y += startY + (endY - startY) * progress;
+            break;
+          }
+        }
       }
       return effects;
     }, { scale: 1, x: 0, y: 0 });

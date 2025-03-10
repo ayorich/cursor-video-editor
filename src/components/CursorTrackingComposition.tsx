@@ -19,43 +19,22 @@ export const CursorTrackingComposition: React.FC<CursorTrackingCompositionProps>
   currentFrame,
   isPlaying,
 }) => {
-  const { fps } = useVideoConfig();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isVideoReady, setIsVideoReady] = useState(false);
-  const lastFrameRef = useRef(currentFrame);
+  const { width, height } = useVideoConfig();
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleCanPlay = () => {
-      setIsVideoReady(true);
-      video.currentTime = currentFrame / fps;
-    };
-
-    video.addEventListener('canplay', handleCanPlay);
-    return () => {
-      video.removeEventListener('canplay', handleCanPlay);
-    };
-  }, [currentFrame, fps]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !isVideoReady) return;
-
+    if (!videoRef.current) return;
     if (isPlaying) {
-      video.play().catch(() => {
-        // Ignore play() errors
-      });
+      videoRef.current.play().catch(console.error);
     } else {
-      video.pause();
-      // Only update time if frame has changed
-      if (lastFrameRef.current !== currentFrame) {
-        video.currentTime = currentFrame / fps;
-        lastFrameRef.current = currentFrame;
-      }
+      videoRef.current.pause();
     }
-  }, [isPlaying, currentFrame, fps, isVideoReady]);
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (!videoRef.current) return;
+    videoRef.current.currentTime = currentFrame / 30;
+  }, [currentFrame]);
 
   return (
     <AbsoluteFill>
@@ -63,7 +42,10 @@ export const CursorTrackingComposition: React.FC<CursorTrackingCompositionProps>
         style={{
           width: '100%',
           height: '100%',
-          transform: `scale(${effects.scale}) translate(${-effects.x}px, ${-effects.y}px)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: `scale(${effects.scale}) translate(${effects.x}px, ${effects.y}px)`,
           transition: 'transform 0.1s ease-out'
         }}
       >
@@ -74,15 +56,6 @@ export const CursorTrackingComposition: React.FC<CursorTrackingCompositionProps>
             width: '100%',
             height: '100%',
             objectFit: 'contain'
-          }}
-          playsInline
-          muted
-          onTimeUpdate={(e) => {
-            const video = e.currentTarget;
-            const currentVideoFrame = Math.round(video.currentTime * fps);
-            if (currentVideoFrame !== currentFrame && !isPlaying) {
-              video.currentTime = currentFrame / fps;
-            }
           }}
         />
       </div>

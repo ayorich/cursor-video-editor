@@ -1,4 +1,8 @@
-# Cursor Tracker
+# Cursor Trackern[hallucinate 50%- no precise context, 15%- better prompt, start simple and build up, precise context]
+
+## About This Project
+
+After using cursor for almost 3hrs , i would say it is great as a coding assistance.
 
 ## About This Project
 

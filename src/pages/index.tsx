@@ -94,7 +94,7 @@ export default function Home() {
               {initialLayers.length > 0 && (
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-blue-600">
-                    Loaded {initialLayers.length} zoom effects from your recording
+                    Loaded {initialLayers.filter(layer => layer.type === 'zoom').length} zoom effects from your recording
                   </p>
                 </div>
               )}
