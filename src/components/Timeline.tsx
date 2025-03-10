@@ -74,19 +74,25 @@ export const Timeline: React.FC<TimelineProps> = ({
   useEffect(() => {
     if (!isDragging) return;
 
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!timelineRef.current) return;
+      
+      const rect = timelineRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percentage = Math.max(0, Math.min(1, x / rect.width));
+      const frame = Math.round(percentage * totalFrames);
+      onFrameChange(frame);
+    };
+
     const handleMouseUp = () => {
       setIsDragging(false);
     };
 
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      handleTimelineInteraction(e);
-    };
-
-    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging]);
@@ -126,7 +132,6 @@ export const Timeline: React.FC<TimelineProps> = ({
             <TimelineLayer
               key={layer.id}
               id={layer.id}
-              type={layer.type}
               startFrame={layer.startFrame}
               endFrame={layer.endFrame}
               totalFrames={totalFrames}

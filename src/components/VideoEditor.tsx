@@ -13,13 +13,23 @@ export interface EffectLayer {
   endValue: number;
 }
 
-export const VideoEditor: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
+interface VideoEditorProps {
+  videoUrl: string;
+  initialLayers?: EffectLayer[];
+  initialDuration?: number | null;
+}
+
+export const VideoEditor: React.FC<VideoEditorProps> = ({ 
+  videoUrl,
+  initialLayers = [],
+  initialDuration = null
+}) => {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
-  const [videoDuration, setVideoDuration] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [layers, setLayers] = useState<EffectLayer[]>([]);
+  const [videoDuration, setVideoDuration] = useState<number>(initialDuration || 0);
+  const [isLoading, setIsLoading] = useState(!initialDuration);
+  const [layers, setLayers] = useState<EffectLayer[]>(initialLayers);
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
   const playerRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -27,15 +37,41 @@ export const VideoEditor: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
   const fps = 30;
   const totalFrames = Math.max(1, Math.floor(videoDuration * fps));
 
+  // Effect to handle initial layers and duration
   useEffect(() => {
+    if (initialLayers.length > 0) {
+      setLayers(initialLayers);
+    }
+  }, [initialLayers, initialDuration, videoDuration, totalFrames]);
+
+  // Effect to track layers state changes
+  useEffect(() => {
+  }, [layers, totalFrames]);
+
+  useEffect(() => {
+    // Only load metadata if we don't have an initial duration
+    if (!videoUrl || initialDuration) return;
+    
     setIsLoading(true);
     const video = document.createElement('video');
     video.src = videoUrl;
+    
     video.onloadedmetadata = () => {
-      setVideoDuration(video.duration);
-      setIsLoading(false);
+      const duration = video.duration;
+      if (isFinite(duration) && duration > 0) {
+        setVideoDuration(duration);
+        setIsLoading(false);
+      } else {
+        setVideoDuration(0);
+        setIsLoading(false);
+      }
     };
-  }, [videoUrl]);
+
+    video.onerror = (e) => {
+      setIsLoading(false);
+      setVideoDuration(0);
+    };
+  }, [videoUrl, initialDuration]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -136,7 +172,7 @@ export const VideoEditor: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
   };
 
   const getEffectsAtFrame = (frame: number) => {
-    return layers.reduce((effects, layer) => {
+    const effects = layers.reduce((effects, layer) => {
       if (frame >= layer.startFrame && frame <= layer.endFrame) {
         const progress = (frame - layer.startFrame) / (layer.endFrame - layer.startFrame);
         const startZoom = layer.startValue;
@@ -145,6 +181,8 @@ export const VideoEditor: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
       }
       return effects;
     }, { scale: 1, x: 0, y: 0 });
+
+    return effects;
   };
 
   const deleteLayer = (id: string) => {
@@ -157,7 +195,25 @@ export const VideoEditor: React.FC<{ videoUrl: string }> = ({ videoUrl }) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center aspect-video w-full bg-gray-100 rounded-lg">
-        <div className="text-gray-500">Loading video...</div>
+        <div className="flex flex-col items-center gap-2">
+          <div className="text-gray-500">Loading video...</div>
+          <div className="text-sm text-gray-400">
+            Duration: {videoDuration}s, Frames: {totalFrames}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (totalFrames === 0) {
+    return (
+      <div className="flex items-center justify-center aspect-video w-full bg-gray-100 rounded-lg">
+        <div className="flex flex-col items-center gap-2">
+          <div className="text-red-500">Error: Invalid video duration</div>
+          <div className="text-sm text-gray-400">
+            Please try uploading the video again
+          </div>
+        </div>
       </div>
     );
   }
